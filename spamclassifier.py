@@ -10,6 +10,7 @@ from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import MultinomialNB
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_curve, auc
 import nltk
 import re
@@ -56,51 +57,6 @@ def load_spam_data(data_directory):
 
     return data, labels
 
-def run_experiment(vectorizer, train_data, train_labels, test_data, test_labels):
-    # Transform text data to numerical vectors
-    X_train = vectorizer.fit_transform(train_data)
-    X_test = vectorizer.transform(test_data)
-    
-    print("Experiment 1.4: Logistic Regression with varying C (Train vs Test)")
-    
-    # Create an empty DataFrame to store results
-    results_df = pd.DataFrame(columns=['C', 'Train_Recall', 'Train_Precision', 'Test_Recall', 'Test_Precision'])
-    
-    # Possible C values for the experiment
-    C_values = [0.01, 0.1, 1, 10, 100]
-    
-    for C in C_values:
-        # Initialize Logistic Regression classifier with C
-        lr_classifier = LogisticRegression(C=C)
-        
-        # Train the classifier
-        lr_classifier.fit(X_train, train_labels)
-        
-        # Evaluate metrics on training set
-        train_predictions = lr_classifier.predict(X_train)
-        train_recall = recall_score(train_labels, train_predictions)
-        train_precision = precision_score(train_labels, train_predictions)
-        
-        # Evaluate metrics on test set
-        test_predictions = lr_classifier.predict(X_test)
-        test_recall = recall_score(test_labels, test_predictions)
-        test_precision = precision_score(test_labels, test_predictions)
-        
-        print(f"For C = {C}:")
-        print(f"  Train Recall: {train_recall}, Train Precision: {train_precision}")
-        print(f"  Test Recall: {test_recall}, Test Precision: {test_precision}")
-
-        # Append to results DataFrame
-        new_row = pd.DataFrame({'C': [C], 
-                        'Train_Recall': [train_recall], 
-                        'Train_Precision': [train_precision],
-                        'Test_Recall': [test_recall], 
-                        'Test_Precision': [test_precision]})
-        results_df = pd.concat([results_df, new_row]).reset_index(drop=True)
-        
-    # Print or save the DataFrame
-    print(results_df)
-
 # Load the training data and labels
 train_data, train_labels = load_spam_data(data_directory)
 
@@ -110,8 +66,59 @@ test_data, test_labels = load_spam_data(test_directory)
 # Create the CountVectorizer
 vectorizer = CountVectorizer(max_features=2000)  # chosen from experiment 1.1
 
-# Run the experiment
-run_experiment(vectorizer, train_data, train_labels, test_data, test_labels)
+def run_comparison(vectorizer, train_data, train_labels, test_data, test_labels):
+    # Transform text data to numerical vectors
+    X_train = vectorizer.fit_transform(train_data)
+    X_test = vectorizer.transform(test_data)
+    
+    print("Experiment 1.5: Model Comparison")
+    
+    # Models to compare: Naive Bayes, k-NN, and Logistic Regression
+    models = {
+        'Naive Bayes': MultinomialNB(),
+        'Logistic Regression': LogisticRegression(C=0.1), # chosen for experiment 1.3
+        'k-NN': KNeighborsClassifier(n_neighbors=10) # chosen from experiment 1.2
+    }
+    
+    plt.figure(figsize=(10, 8))
+
+    for name, model in models.items():
+        # Train the model
+        model.fit(X_train, train_labels)
+        
+        # Predict on the test set
+        test_predictions = model.predict(X_test)
+        
+        # Evaluate metrics
+        accuracy = accuracy_score(test_labels, test_predictions)
+        precision = precision_score(test_labels, test_predictions)
+        recall = recall_score(test_labels, test_predictions)
+        f1 = f1_score(test_labels, test_predictions)
+        
+        # Calculate and plot ROC curve
+        fpr, tpr, thresholds = roc_curve(test_labels, model.predict_proba(X_test)[:, 1])
+        roc_auc = auc(fpr, tpr)
+        
+        print(f"{name}:")
+        print(f"  Accuracy: {accuracy}")
+        print(f"  Precision: {precision}")
+        print(f"  Recall: {recall}")
+        print(f"  F1-score: {f1}")
+        print(f"  AUC-ROC: {roc_auc}")
+
+        plt.plot(fpr, tpr, lw=2, label=f'{name} (AUC = {roc_auc:.2f})')
+    
+    plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver Operating Characteristic')
+    plt.legend(loc="lower right")
+    plt.show()
+
+run_comparison(vectorizer, train_data, train_labels, test_data, test_labels)
+
 
 # # Create a CountVectorizer with a maximum vocabulary size of 2000 words
 # vectorizer = CountVectorizer(max_features=2000)
