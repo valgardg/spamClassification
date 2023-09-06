@@ -15,6 +15,7 @@ import nltk
 import re
 import matplotlib.pyplot as plt
 from sklearn.neighbors import KNeighborsClassifier # added for experiment 2
+import pandas as pd # added for experiment 1.4
 
 # Download necessary resources from nltk
 nltk.download('punkt')
@@ -60,8 +61,10 @@ def run_experiment(vectorizer, train_data, train_labels, test_data, test_labels)
     X_train = vectorizer.fit_transform(train_data)
     X_test = vectorizer.transform(test_data)
     
-    # ================== Experiment 1.3: Logistic Regression with varying C ======================
-    print("Experiment 1.3: Logistic Regression with varying C")
+    print("Experiment 1.4: Logistic Regression with varying C (Train vs Test)")
+    
+    # Create an empty DataFrame to store results
+    results_df = pd.DataFrame(columns=['C', 'Train_Recall', 'Train_Precision', 'Test_Recall', 'Test_Precision'])
     
     # Possible C values for the experiment
     C_values = [0.01, 0.1, 1, 10, 100]
@@ -73,37 +76,30 @@ def run_experiment(vectorizer, train_data, train_labels, test_data, test_labels)
         # Train the classifier
         lr_classifier.fit(X_train, train_labels)
         
-        # Predict on the test set
+        # Evaluate metrics on training set
+        train_predictions = lr_classifier.predict(X_train)
+        train_recall = recall_score(train_labels, train_predictions)
+        train_precision = precision_score(train_labels, train_predictions)
+        
+        # Evaluate metrics on test set
         test_predictions = lr_classifier.predict(X_test)
-        
-        # Evaluate metrics
-        accuracy = accuracy_score(test_labels, test_predictions)
-        precision = precision_score(test_labels, test_predictions)
-        recall = recall_score(test_labels, test_predictions)
-        f1 = f1_score(test_labels, test_predictions)
-        
-        # Calculate and plot ROC curve for each C value
-        fpr, tpr, thresholds = roc_curve(test_labels, lr_classifier.predict_proba(X_test)[:, 1])
-        roc_auc = auc(fpr, tpr)
+        test_recall = recall_score(test_labels, test_predictions)
+        test_precision = precision_score(test_labels, test_predictions)
         
         print(f"For C = {C}:")
-        print(f"  Accuracy: {accuracy}")
-        print(f"  Precision: {precision}")
-        print(f"  Recall: {recall}")
-        print(f"  F1-score: {f1}")
-        print(f"  AUC-ROC: {roc_auc}")
+        print(f"  Train Recall: {train_recall}, Train Precision: {train_precision}")
+        print(f"  Test Recall: {test_recall}, Test Precision: {test_precision}")
+
+        # Append to results DataFrame
+        new_row = pd.DataFrame({'C': [C], 
+                        'Train_Recall': [train_recall], 
+                        'Train_Precision': [train_precision],
+                        'Test_Recall': [test_recall], 
+                        'Test_Precision': [test_precision]})
+        results_df = pd.concat([results_df, new_row]).reset_index(drop=True)
         
-        plt.plot(fpr, tpr, lw=2, label=f'C={C} (AUC = {roc_auc:.2f})')
-    
-    # ROC curve settings and show plot
-    plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title('Receiver Operating Characteristic (Logistic Regression, multiple C)')
-    plt.legend(loc="lower right")
-    plt.show()
+    # Print or save the DataFrame
+    print(results_df)
 
 # Load the training data and labels
 train_data, train_labels = load_spam_data(data_directory)
