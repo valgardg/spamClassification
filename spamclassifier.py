@@ -1,7 +1,6 @@
 #
 # Simple solution to first (ungraded) assignment, created with ChatGPT in < 20 minutes
 #
-
 import os
 import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer
