@@ -14,6 +14,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 import nltk
 import re
 import matplotlib.pyplot as plt
+from sklearn.neighbors import KNeighborsClassifier # added for experiment 2
 
 # Download necessary resources from nltk
 nltk.download('punkt')
@@ -59,23 +60,51 @@ def run_experiment(vectorizer, train_data, train_labels, test_data, test_labels)
     X_train = vectorizer.fit_transform(train_data)
     X_test = vectorizer.transform(test_data)
     
-    # Train a classifier
-    classifier = MultinomialNB()
-    classifier.fit(X_train, train_labels)
-    
-    # Prediction and evaluation
-    test_predictions = classifier.predict(X_test)
-    accuracy = accuracy_score(test_labels, test_predictions)
-    precision = precision_score(test_labels, test_predictions)
-    recall = recall_score(test_labels, test_predictions)
-    f1 = f1_score(test_labels, test_predictions)
-    
-    # ROC curve
-    fpr, tpr, _ = roc_curve(test_labels, classifier.predict_proba(X_test)[:, 1])
-    roc_auc = auc(fpr, tpr)
-    
-    return accuracy, precision, recall, f1, roc_auc, fpr, tpr
+    # ================== Experiment 1.2: KNN with varying k ======================
+    print("Experiment 1.2: KNN with varying k")
 
+    # Possible k values for the experiment
+    k_values = [4, 6, 8, 10, 15, 20]
+
+    plt.figure()
+
+    for k in k_values:
+        # Initialize KNN classifier with k neighbors
+        knn_classifier = KNeighborsClassifier(n_neighbors=k)
+        
+        # Train the classifier
+        knn_classifier.fit(X_train, train_labels)
+        
+        # Predict on the test set
+        test_predictions = knn_classifier.predict(X_test)
+        
+        # Evaluate metrics
+        accuracy = accuracy_score(test_labels, test_predictions)
+        precision = precision_score(test_labels, test_predictions)
+        recall = recall_score(test_labels, test_predictions)
+        f1 = f1_score(test_labels, test_predictions)
+        
+        print(f"For k = {k}:")
+        print(f"  Accuracy: {accuracy}")
+        print(f"  Precision: {precision}")
+        print(f"  Recall: {recall}")
+        print(f"  F1-score: {f1}")
+        
+        # Calculate and plot ROC curve for each k
+        fpr, tpr, thresholds = roc_curve(test_labels, knn_classifier.predict_proba(X_test)[:, 1])
+        roc_auc = auc(fpr, tpr)
+        
+        plt.plot(fpr, tpr, lw=2, label=f'k={k} (AUC = {roc_auc:.2f})')
+
+    # ROC curve settings and show plot
+    plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver Operating Characteristic (KNN, multiple k)')
+    plt.legend(loc="lower right")
+    plt.show()
 
 # Load the training data and labels
 train_data, train_labels = load_spam_data(data_directory)
@@ -83,31 +112,11 @@ train_data, train_labels = load_spam_data(data_directory)
 # Load the test data and labels
 test_data, test_labels = load_spam_data(test_directory)
 
-# Different dictionary sizes for experiment 1
-dictionary_sizes = [100, 500, 1000, 2000, 3000]
-plt.figure()
+# Create the CountVectorizer
+vectorizer = CountVectorizer(max_features=2000)  # chosen from experiment 1.1
 
-for size in dictionary_sizes:
-    vectorizer = CountVectorizer(max_features=size)
-    accuracy, precision, recall, f1, roc_auc, fpr, tpr = run_experiment(
-        vectorizer, train_data, train_labels, test_data, test_labels)
-    
-    # Print and/or store metrics...
-    print(f"For dictionary size {size}:")
-    print(f"Accuracy: {accuracy}, Precision: {precision}, Recall: {recall}, F1-score: {f1}, AUC-ROC: {roc_auc}")
-    
-    # Plot ROC curve for this dictionary size
-    plt.plot(fpr, tpr, lw=2, label=f'Dictionary Size {size} (AUC = {roc_auc:.2f})')
-
-# ROC curve settings and show plot
-plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-plt.xlim([0.0, 1.0])
-plt.ylim([0.0, 1.05])
-plt.xlabel('False Positive Rate')
-plt.ylabel('True Positive Rate')
-plt.title('Influence of Dictionary Size on ROC Curve')
-plt.legend(loc="lower right")
-plt.show()
+# Run the experiment
+run_experiment(vectorizer, train_data, train_labels, test_data, test_labels)
 
 # # Create a CountVectorizer with a maximum vocabulary size of 2000 words
 # vectorizer = CountVectorizer(max_features=2000)
