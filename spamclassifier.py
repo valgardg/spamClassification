@@ -60,23 +60,21 @@ def run_experiment(vectorizer, train_data, train_labels, test_data, test_labels)
     X_train = vectorizer.fit_transform(train_data)
     X_test = vectorizer.transform(test_data)
     
-    # ================== Experiment 1.2: KNN with varying k ======================
-    print("Experiment 1.2: KNN with varying k")
-
-    # Possible k values for the experiment
-    k_values = [4, 6, 8, 10, 15, 20]
-
-    plt.figure()
-
-    for k in k_values:
-        # Initialize KNN classifier with k neighbors
-        knn_classifier = KNeighborsClassifier(n_neighbors=k)
+    # ================== Experiment 1.3: Logistic Regression with varying C ======================
+    print("Experiment 1.3: Logistic Regression with varying C")
+    
+    # Possible C values for the experiment
+    C_values = [0.01, 0.1, 1, 10, 100]
+    
+    for C in C_values:
+        # Initialize Logistic Regression classifier with C
+        lr_classifier = LogisticRegression(C=C)
         
         # Train the classifier
-        knn_classifier.fit(X_train, train_labels)
+        lr_classifier.fit(X_train, train_labels)
         
         # Predict on the test set
-        test_predictions = knn_classifier.predict(X_test)
+        test_predictions = lr_classifier.predict(X_test)
         
         # Evaluate metrics
         accuracy = accuracy_score(test_labels, test_predictions)
@@ -84,26 +82,26 @@ def run_experiment(vectorizer, train_data, train_labels, test_data, test_labels)
         recall = recall_score(test_labels, test_predictions)
         f1 = f1_score(test_labels, test_predictions)
         
-        print(f"For k = {k}:")
+        # Calculate and plot ROC curve for each C value
+        fpr, tpr, thresholds = roc_curve(test_labels, lr_classifier.predict_proba(X_test)[:, 1])
+        roc_auc = auc(fpr, tpr)
+        
+        print(f"For C = {C}:")
         print(f"  Accuracy: {accuracy}")
         print(f"  Precision: {precision}")
         print(f"  Recall: {recall}")
         print(f"  F1-score: {f1}")
-        
-        # Calculate and plot ROC curve for each k
-        fpr, tpr, thresholds = roc_curve(test_labels, knn_classifier.predict_proba(X_test)[:, 1])
-        roc_auc = auc(fpr, tpr)
         print(f"  AUC-ROC: {roc_auc}")
         
-        plt.plot(fpr, tpr, lw=2, label=f'k={k} (AUC = {roc_auc:.2f})')
-
+        plt.plot(fpr, tpr, lw=2, label=f'C={C} (AUC = {roc_auc:.2f})')
+    
     # ROC curve settings and show plot
     plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
-    plt.title('Receiver Operating Characteristic (KNN, multiple k)')
+    plt.title('Receiver Operating Characteristic (Logistic Regression, multiple C)')
     plt.legend(loc="lower right")
     plt.show()
 
