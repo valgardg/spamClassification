@@ -93,6 +93,7 @@ def run_experiment(vectorizer, train_data, train_labels, test_data, test_labels)
         # Calculate and plot ROC curve for each k
         fpr, tpr, thresholds = roc_curve(test_labels, knn_classifier.predict_proba(X_test)[:, 1])
         roc_auc = auc(fpr, tpr)
+        print(f"  AUC-ROC: {roc_auc}")
         
         plt.plot(fpr, tpr, lw=2, label=f'k={k} (AUC = {roc_auc:.2f})')
 
